@@ -111,7 +111,18 @@ def detect(save_img=False):
                     if save_img or view_img:  # Add bbox to image
                         label = '%s %.2f' % (names[int(cls)], conf)
                         plot_one_box(xyxy, im0, label=label, color=colors[int(cls)], line_thickness=3)
-
+                        
+                #Get Object Coordinates
+                #mid_x, mid_y = det.bbox.get_point(pyyolo.BBox.Location.MID) --> NEED TO TEST
+                #c_x,c_y = dataset.c_x, dataset.c_y
+                #if mid_x < c_x
+                    #ROBOT TURN LEFT
+                #else
+                    #ROBOT TURN RIGHT
+                
+                
+                
+                
             # Print time (inference + NMS)
             print('%sDone. (%.3fs)' % (s, t2 - t1))
 
