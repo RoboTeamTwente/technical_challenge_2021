@@ -103,15 +103,31 @@ def detect(save_img=False):
 
                 # Write results
                 for *xyxy, conf, cls in reversed(det):
-                    if save_txt:  # Write to file
-                        xywh = (xyxy2xywh(torch.tensor(xyxy).view(1, 4)) / gn).view(-1).tolist()  # normalized xywh
+                    
+                    if save_txt:  # Write to file  
+                        xywh = (xyxy2xywh(torch.tensor(xyxy).view(1, 4)) / gn).view(-1).tolist()  # normalized xywh           
                         with open(txt_path + '.txt', 'a') as f:
                             f.write(('%g ' * 5 + '\n') % (cls, *xywh))  # label format
 
+                    
                     if save_img or view_img:  # Add bbox to image
                         label = '%s %.2f' % (names[int(cls)], conf)
                         plot_one_box(xyxy, im0, label=label, color=colors[int(cls)], line_thickness=3)
+                    
+                    xywh = (xyxy2xywh(torch.tensor(xyxy).view(1, 4)) / gn).view(-1).tolist()  # normalized xywh
+                    #Get Object Coordinates
+                    mid_x = xywh[0]
+                    mid_y = xywh[1]
+                    #print mid coordinates of the box
+                    print('Mid coordinates of box %.3f,%.3f' % (mid_x,mid_y))
+                    
+                    #if mid_x < 0.5
+                    #ROBOT TURN LEFT
+                    #else 
+                    #ROBOT TURN RIGHT  
+                    
 
+                
             # Print time (inference + NMS)
             print('%sDone. (%.3fs)' % (s, t2 - t1))
 
