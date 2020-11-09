@@ -14,7 +14,7 @@ from PIL import Image, ExifTags
 from torch.utils.data import Dataset
 from tqdm import tqdm
 
-from utils.utils import xyxy2xywh, xywh2xyxy
+from utils.general import xyxy2xywh, xywh2xyxy
 
 help_url = 'https://github.com/ultralytics/yolov5/wiki/Train-Custom-Data'
 img_formats = ['.bmp', '.jpg', '.jpeg', '.png', '.tif', '.dng']
@@ -183,7 +183,7 @@ class LoadWebcam:  # for inference
 
 
 class LoadStreams:  # multiple IP or RTSP cameras
-    def __init__(self, sources='streams.txt', img_size=416, c_x, c_y): #NEED TO TEST THE C_X, C_Y attributes
+    def __init__(self, sources='streams.txt', img_size=416):
         self.mode = 'images'
         self.img_size = img_size
 
@@ -199,12 +199,12 @@ class LoadStreams:  # multiple IP or RTSP cameras
         for i, s in enumerate(sources):
             # Start the thread to read frames from the video stream
             print('%g/%g: %s... ' % (i + 1, n, s), end='')
-            # cv2.VideoCapture(0 if s == '0' else s)
-            cap = cv2.VideoCapture("nvarguscamerasrc ! video/x-raw(memory:NVMM), width=(int)680, height=(int)480, format=(string)NV12, framerate=(fraction)30/1 ! nvvidconv ! video/x-raw, format=(string)BGRx ! videoconvert ! video/x-raw, format=(string)BGR ! appsink") 
+            cap = cv2.VideoCapture(0 if s == '0' else s)#For run in the computer
+            #cap = cv2.VideoCapture("nvarguscamerasrc ! video/x-raw(memory:NVMM), width=(int)680, height=(int)480, format=(string)NV12, framerate=(fraction)30/1 ! nvvidconv ! video/x-raw, format=(string)BGRx ! videoconvert ! video/x-raw, format=(string)BGR ! appsink") 
             assert cap.isOpened(), 'Failed to open %s' % s
             w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
             h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-            #self.c_x, self.c_y = w/2, h/2 --> STILL NEEDS TO BE TESTED!!!!!!!!!!
+            
             fps = cap.get(cv2.CAP_PROP_FPS) % 100
             _, self.imgs[i] = cap.read()  # guarantee first frame
             thread = Thread(target=self.update, args=([i, cap]), daemon=True)
@@ -239,8 +239,7 @@ class LoadStreams:  # multiple IP or RTSP cameras
         img0 = self.imgs.copy()
         if cv2.waitKey(1) == ord('q'):  # q to quit
             cv2.destroyAllWindows()
-            #INSERT HERE LINE TO SAFELY CLOSE THE CAMERA STREAM!!!!!!!!!!!!!!
-            #cap.release()
+            cap.release()
             raise StopIteration
 
         # Letterbox
