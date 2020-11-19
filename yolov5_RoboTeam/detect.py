@@ -80,19 +80,39 @@ def detect(save_img=False):
         # Apply Classifier
         if classify:
             pred = apply_classifier(pred, modelc, img, im0s)
-
+        
+        hasBall = 0
+             
+        
         # Process detections
         for i, det in enumerate(pred):  # detections per image
             if webcam:  # batch_size >= 1
                 p, s, im0 = path[i], '%g: ' % i, im0s[i].copy()
             else:
                 p, s, im0 = path, '', im0s
-
+            
+            
+            #Add deadzone to the image
+            cv2.rectangle(im0, (0,im0.shape[1]*0.45), (im0.shape[0],im0.shape[1]*0.55), (0,0,255) , thickness=3, lineType=cv2.LINE_AA)
+            
             save_path = str(Path(out) / Path(p).name)
             txt_path = str(Path(out) / Path(p).stem) + ('_%g' % dataset.frame if dataset.mode == 'video' else '')
             s += '%gx%g ' % img.shape[2:]  # print string
             gn = torch.tensor(im0.shape)[[1, 0, 1, 0]]  # normalization gain whwh
-            if det is not None and len(det):
+            
+            if det is None
+                
+                if not(hasBall)
+                    angle = pi/12 #rad/s
+                    theta = 0
+                    angularControl = 0 #angular velocity control
+                else 
+                    #STOP THE ROBOT
+                    angle = 0 #rad/s
+                    theta = 0
+                    angularControl = 0 #angular velocity control
+                
+            elif det is not None and len(det):
                 # Rescale boxes from img_size to im0 size
                 det[:, :4] = scale_coords(img.shape[2:], det[:, :4], im0.shape).round()
 
@@ -121,13 +141,24 @@ def detect(save_img=False):
                     #print mid coordinates of the box
                     print('Mid coordinates of box %.3f,%.3f' % (mid_x,mid_y))
                     
-                    #if mid_x < 0.5
-                    #ROBOT TURN LEFT
-                    #else 
-                    #ROBOT TURN RIGHT  
+                    if mid_x < 0.45
+                        #ROBOT TURN LEFT
+                        angle = pi/12 #rad/s
+                        theta = 0
+                        angularControl = 0 #angular velocity control
+                        
+                    elif mid_x > 0.55 
+                        #ROBOT TURN RIGHT
+                        angle = -pi/12 #rad/s
+                        theta = 0
+                        angularControl = 0 #angular velocity control
                     
-
-                
+                    else 
+                        #DRIVE STRAIGHT TO THE BALL
+                        angle = 0 #rad/s
+                        theta = 0.2 #m/s
+                        angularControl = 0 #angular velocity control
+                                    
             # Print time (inference + NMS)
             print('%sDone. (%.3fs)' % (s, t2 - t1))
 
@@ -135,6 +166,8 @@ def detect(save_img=False):
             if view_img:
                 cv2.imshow(p, im0)
                 if cv2.waitKey(1) == ord('q'):  # q to quit
+                    cv2.destroyAllWindows()
+                    cap.release()
                     raise StopIteration
 
             # Save results (image with detections)
