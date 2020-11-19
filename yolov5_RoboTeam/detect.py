@@ -166,8 +166,8 @@ def detect(save_img=False):
             if view_img:
                 cv2.imshow(p, im0)
                 if cv2.waitKey(1) == ord('q'):  # q to quit
-                    cv2.destroyAllWindows()
                     cap.release()
+                    cv2.destroyAllWindows()
                     raise StopIteration
 
             # Save results (image with detections)
