@@ -199,8 +199,13 @@ class LoadStreams:  # multiple IP or RTSP cameras
         for i, s in enumerate(sources):
             # Start the thread to read frames from the video stream
             print('%g/%g: %s... ' % (i + 1, n, s), end='')
-            cap = cv2.VideoCapture(0 if s == '0' else s)#For run in the computer
-            #cap = cv2.VideoCapture("nvarguscamerasrc ! video/x-raw(memory:NVMM), width=(int)680, height=(int)480, format=(string)NV12, framerate=(fraction)30/1 ! nvvidconv ! video/x-raw, format=(string)BGRx ! videoconvert ! video/x-raw, format=(string)BGR ! appsink") 
+            
+            #Running in the computer
+            #cap = cv2.VideoCapture(0 if s == '0' else s)
+            
+            #Running in the Jetson
+            gstreamer_pipe = "nvarguscamerasrc ! video/x-raw(memory:NVMM), width=(int)680, height=(int)480, format=(string)NV12, framerate=(fraction)30/1 ! nvvidconv ! video/x-raw, format=(string)BGRx ! videoconvert ! video/x-raw, format=(string)BGR ! appsink";
+            cap = cv2.VideoCapture(gstreamer_pipe, cv2.CAP_GSTREAMER) 
             assert cap.isOpened(), 'Failed to open %s' % s
             w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
             h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
@@ -238,8 +243,9 @@ class LoadStreams:  # multiple IP or RTSP cameras
         self.count += 1
         img0 = self.imgs.copy()
         if cv2.waitKey(1) == ord('q'):  # q to quit
-            cv2.destroyAllWindows()
+            cap.stop()
             cap.release()
+            cv2.destroyAllWindows()
             raise StopIteration
 
         # Letterbox
