@@ -10,6 +10,7 @@ from threading import Thread
 import cv2
 import numpy as np
 import torch
+import os
 from PIL import Image, ExifTags
 from torch.utils.data import Dataset
 from tqdm import tqdm
@@ -148,6 +149,7 @@ class LoadWebcam:  # for inference
         if cv2.waitKey(1) == ord('q'):  # q to quit
             self.cap.release()
             cv2.destroyAllWindows()
+            os.system('echo sudo nvargus-daemon restart')
             raise StopIteration
 
         # Read frame
@@ -204,7 +206,7 @@ class LoadStreams:  # multiple IP or RTSP cameras
             #cap = cv2.VideoCapture(0 if s == '0' else s)
             
             #Running in the Jetson
-            gstreamer_pipe = "nvarguscamerasrc ! video/x-raw(memory:NVMM), width=(int)680, height=(int)480, format=(string)NV12, framerate=(fraction)30/1 ! nvvidconv ! video/x-raw, format=(string)BGRx ! videoconvert ! video/x-raw, format=(string)BGR ! appsink";
+            gstreamer_pipe = "nvarguscamerasrc ! video/x-raw(memory:NVMM), width=(int)640, height=(int)480, format=(string)NV12, framerate=(fraction)30/1 ! nvvidconv ! video/x-raw, format=(string)BGRx ! videoconvert ! video/x-raw, format=(string)BGR ! appsink";
             cap = cv2.VideoCapture(gstreamer_pipe, cv2.CAP_GSTREAMER) 
             assert cap.isOpened(), 'Failed to open %s' % s
             w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
