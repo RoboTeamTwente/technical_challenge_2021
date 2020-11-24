@@ -129,8 +129,10 @@ def detect(save_img=False):
                     #Get Object Coordinates
                     mid_x = xywh[0]
                     mid_y = xywh[1]
+                    box_w = xywh[2]
+                    box_h = xywh[3]
                     #print mid coordinates of the box
-                    print('Mid coordinates of box %.3f,%.3f' % (mid_x,mid_y))
+                    print('Mid coordinates of box,w, h: %.3f,%.3f,%.3f,%.3f' % (mid_x,mid_y, box_w, box_h))
                     
                     if (mid_x < 0.45):
                         #ROBOT TURN LEFT
@@ -167,7 +169,7 @@ def detect(save_img=False):
             if view_img:
                 cv2.imshow(p, im0)
                 if cv2.waitKey(1) == ord('q'):  # q to quit
-                    cap.release()
+                    
                     cv2.destroyAllWindows()
                     raise StopIteration
 
