@@ -11,6 +11,12 @@ import torch
 import torch.backends.cudnn as cudnn
 from numpy import random
 
+#Robot embedded messages python bindings - Jetson needs setup
+import rem
+
+#Serial communication
+import serial
+
 from models.experimental import attempt_load
 from utils.datasets import LoadStreams, LoadImages
 from utils.general import (
@@ -20,8 +26,8 @@ from utils.torch_utils import select_device, load_classifier, time_synchronized
 
 
 def detect(save_img=False):
-    out, source, weights, view_img, save_txt, imgsz = \
-        opt.output, opt.source, opt.weights, opt.view_img, opt.save_txt, opt.img_size
+    out, source, weights, view_img, save_txt, imgsz, serial = \
+        opt.output, opt.source, opt.weights, opt.view_img, opt.save_txt, opt.img_size, opt.serial
     webcam = source.isnumeric() or source.startswith(('rtsp://', 'rtmp://', 'http://')) or source.endswith('.txt')
 
     # Initialize
@@ -31,7 +37,18 @@ def detect(save_img=False):
         shutil.rmtree(out)  # delete output folder
     os.makedirs(out)  # make new output folder
     half = device.type != 'cpu'  # half precision only supported on CUDA
-
+    
+    if serial:
+        serial_port = serial.Serial(
+        port="/dev/ttyACM0",
+        baudrate=115200,
+        bytesize=serial.EIGHTBITS,
+        parity=serial.PARITY_NONE,
+        stopbits=serial.STOPBITS_ONE,
+        )
+        # Wait a second to let the port initialize
+        time.sleep(1)
+    
     # Load model 
     model = attempt_load(weights, map_location=device)  # load FP32 model
     imgsz = check_img_size(imgsz, s=model.stride.max())  # check img_size
@@ -161,7 +178,31 @@ def detect(save_img=False):
                     angle = 0 #rad/s
                     theta = 0
                     angularControl = 0 #angular velocity control      
+            
+            if serial:
+                #Constructing the packet
+                cmd = rem.ffi.new("RobotCommand*")
+                cmd.id = 10
+                cmd.angle = angle
+                cmd.theta = theta
+                cmd. angularControl = angularControl
 
+                packet = rem.ffi.new("RobotCommandPayload*")
+                rem.lib.encodeRobotCommand(packet, cmd)
+
+
+                #Sending the packet
+                try:
+                    serial_port.write(packet.payload)
+                    
+                except KeyboardInterrupt:
+                    print("Exiting Program")
+
+                except Exception as exception_error:
+                    print("Error occurred. Exiting Program")
+                    print("Error: " + str(exception_error))
+
+            
             # Print time (inference + NMS)
             print('%sDone. (%.3fs)' % (s, t2 - t1))
 
@@ -196,7 +237,8 @@ def detect(save_img=False):
             os.system('open ' + save_path)
 
     print('Done. (%.3fs)' % (time.time() - t0))
-
+    
+    serial_port.close()
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -213,6 +255,7 @@ if __name__ == '__main__':
     parser.add_argument('--agnostic-nms', action='store_true', help='class-agnostic NMS')
     parser.add_argument('--augment', action='store_true', help='augmented inference')
     parser.add_argument('--update', action='store_true', help='update all models')
+    parser.add_argument('--serial', type=bool, default=False)
     opt = parser.parse_args()
     print(opt)
 
