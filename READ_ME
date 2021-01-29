@@ -1,0 +1,27 @@
+FOLDER:
+technical_challenge_2021/yolov5_RoboTeam/
+
+
+COMMANDS:
+- With basestation connected:
+ 
+python detect.py --weights best2.pt --img 416 --conf 0.4 --source 0 --conn True
+
+- Without basesation:
+python detect.py --weights best2.pt --img 416 --conf 0.4 --source 0 --conn False
+
+
+IF ERROR "...has no attribute shape" appears, restart the camera with this command, and then run again:
+sudo service nvargus-daemon restart
+
+
+The robot takes about 20 seconds to start after running the command
+
+
+
+
+
+
+ADDITTIONAL COMMANDS TO OPEN THE CAMERA:
+gst-launch-1.0 nvarguscamerasrc ! nvoverlaysink
+nvgstcapture
