@@ -11,6 +11,14 @@ import torch
 import torch.backends.cudnn as cudnn
 from numpy import random
 
+import utils_1 as utils
+
+#Robot embedded messages python bindings - Jetson needs setup
+from rem import rem
+
+#Serial communication
+import serial
+
 from models.experimental import attempt_load
 from utils.datasets import LoadStreams, LoadImages
 from utils.general import (
@@ -20,8 +28,8 @@ from utils.torch_utils import select_device, load_classifier, time_synchronized
 
 
 def detect(save_img=False):
-    out, source, weights, view_img, save_txt, imgsz = \
-        opt.output, opt.source, opt.weights, opt.view_img, opt.save_txt, opt.img_size
+    out, source, weights, view_img, save_txt, imgsz, conn = \
+        opt.output, opt.source, opt.weights, opt.view_img, opt.save_txt, opt.img_size, opt.conn
     webcam = source.isnumeric() or source.startswith(('rtsp://', 'rtmp://', 'http://')) or source.endswith('.txt')
 
     # Initialize
@@ -31,7 +39,29 @@ def detect(save_img=False):
         shutil.rmtree(out)  # delete output folder
     os.makedirs(out)  # make new output folder
     half = device.type != 'cpu'  # half precision only supported on CUDA
+    
+    #Parameter definition
+    print(conn)    
+    angle = 0
+    rho = 0
+    saw_ball = 0
+    theta = 0
+    theta_increment = 3*math.pi/4
+    increment = math.pi/48
 
+
+    if conn:
+        serial_port_1 = serial.Serial(
+        port="/dev/ttyACM0",
+        baudrate=115200,
+        bytesize=serial.EIGHTBITS,
+        parity=serial.PARITY_NONE,
+        stopbits=serial.STOPBITS_ONE,
+        )
+        # Wait a second to let the port initialize
+        serial_port = utils.openContinuous(timeout=0.01)
+        time.sleep(1)
+    
     # Load model 
     model = attempt_load(weights, map_location=device)  # load FP32 model
     imgsz = check_img_size(imgsz, s=model.stride.max())  # check img_size
@@ -83,6 +113,7 @@ def detect(save_img=False):
             pred = apply_classifier(pred, modelc, img, im0s)
         
         hasBall = 0
+        
              
         
         # Process detections
@@ -134,34 +165,77 @@ def detect(save_img=False):
                     #print mid coordinates of the box
                     print('Mid coordinates of box,w, h: %.3f,%.3f,%.3f,%.3f' % (mid_x,mid_y, box_w, box_h))
                     
+                    
+                    
                     if (mid_x < 0.45):
                         #ROBOT TURN LEFT
-                        angle = math.pi/12 #rad/s
-                        theta = 0
+                        angle = angle + increment #rad/s
+                        print('LEFT %.4f', angle)
+                        rho = 0
                         angularControl = 0 #angular velocity control
                         
                     elif (mid_x > 0.55): 
                         #ROBOT TURN RIGHT
-                        angle = -math.pi/12 #rad/s
-                        theta = 0
+                        angle = angle - increment #rad/s
+                        print('RIGHT %.4f', angle)
+                        rho = 0
                         angularControl = 0 #angular velocity control
                     
                     else: 
                         #DRIVE STRAIGHT TO THE BALL
-                        angle = 0 #rad/s
-                        theta = 0.2 #m/s
+                        angle = angle + 0 #rad/s
+                        print('STRAIGHT %.4f', angle)
+                        rho = rho + 0.1 #m/s
+                        #if saw_ball:
+                            #theta = theta #----> INSERT VALUE FOR THE ROBOT TO MOVE IN THE DIRECTION OF THE CAMERA
                         angularControl = 0 #angular velocity control
+                        saw_ball = 1
             else:
                 if not(hasBall):
-                    angle = math.pi/12 #rad/s
-                    theta = 0
+                    angle = angle + increment #rad/s
+                    print('NOBALL %.4f', angle)
+                    rho = 0
                     angularControl = 0 #angular velocity control
                 else: 
                     #STOP THE ROBOT
-                    angle = 0 #rad/s
-                    theta = 0
+                    angle = angle + 0 #rad/s
+                    rho = 0
                     angularControl = 0 #angular velocity control      
+            
+            if conn:
+                #Constructing the packet
+                cmd = rem.ffi.new("RobotCommand*")
+                cmd.header = rem.lib.PACKET_TYPE_ROBOT_COMMAND
+                cmd.id = 3
 
+                #check value of angle
+                
+                if angle > math.pi*2:
+                            angle = angle - math.pi*2
+
+                if angle < -math.pi*2:
+                            angle = angle + math.pi*2
+
+                cmd.angle = angle
+                #cmd.rho = rho
+                #cmd.theta = theta
+                #cmd. angularControl = angularControl
+
+                packet = rem.ffi.new("RobotCommandPayload*")
+                rem.lib.encodeRobotCommand(packet, cmd)
+
+                #Sending the packet
+                try:
+                    serial_port.write(packet.payload)
+                    print("         angle : %.4f" % cmd.angle);
+                except KeyboardInterrupt:
+                    print("Exiting Program")
+
+                except Exception as exception_error:
+                    print("Error occurred. Exiting Program")
+                    print("Error: " + str(exception_error))
+
+                
             # Print time (inference + NMS)
             print('%sDone. (%.3fs)' % (s, t2 - t1))
 
@@ -196,7 +270,8 @@ def detect(save_img=False):
             os.system('open ' + save_path)
 
     print('Done. (%.3fs)' % (time.time() - t0))
-
+    
+    serial_port.close()
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -213,6 +288,7 @@ if __name__ == '__main__':
     parser.add_argument('--agnostic-nms', action='store_true', help='class-agnostic NMS')
     parser.add_argument('--augment', action='store_true', help='augmented inference')
     parser.add_argument('--update', action='store_true', help='update all models')
+    parser.add_argument('--conn', type=bool, default=False)
     opt = parser.parse_args()
     print(opt)
 
